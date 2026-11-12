@@ -7,7 +7,7 @@
   Uses the saved login at %LOCALAPPDATA%\proxycheck-credential.xml.
   Username shape the gateway accepts:
     {account}_country-US_state-maryland_session-{id}_sesstime-1440
-  Stops when ipinfo reports Glen Burnie, Maryland, and ZIP 21061.
+  Stops at the first US exit ipinfo places within 20 miles of ZIP 21061.
   Copies a Linken Sphere line: host:port:username:password
   That is budget.legionproxy.io:1337:USER:PASS
   It does not build host:port@user:pass.
@@ -18,7 +18,8 @@
 [CmdletBinding()]
 param(
     [string]$Zip = '21061',
-    [int]$Attempts = 100
+    [int]$Attempts = 100,
+    [double]$RadiusMiles = 20
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +32,9 @@ if ($Zip -notmatch '^[0-9]{5}$') {
 }
 if ($Attempts -lt 1) {
     throw '-Attempts must be at least 1.'
+}
+if ($RadiusMiles -le 0) {
+    throw '-RadiusMiles must be greater than 0.'
 }
 
 $loginFile = Join-Path $env:LOCALAPPDATA 'proxycheck-credential.xml'
@@ -69,9 +73,9 @@ $checked = 0
 $closestMiles = [double]::PositiveInfinity
 $closest = $null
 
-Write-Host "Hunting $wantCity, $wantRegion $Zip"
+Write-Host "Hunting within $RadiusMiles miles of $wantCity, $wantRegion $Zip"
 Write-Host "Username: ${account}_country-US_state-${stateSlug}_session-XXXXXXXXXX_sesstime-1440"
-Write-Host "Match rule: ipinfo city, state, and ZIP. Linken Sphere copy is host:port:user:pass."
+Write-Host "Match rule: US exit within $RadiusMiles miles. Linken Sphere copy is host:port:user:pass."
 
 try {
     for ($i = 1; $i -le $Attempts; $i++) {
@@ -124,10 +128,7 @@ noproxy = ""
             $closest = '{0}, {1} {2} ({3} mi)' -f $info.city, $info.region, $info.postal, $milesRounded
         }
 
-        $cityOk = ([string]$info.city).Trim().Equals($wantCity, [StringComparison]::OrdinalIgnoreCase)
-        $stateOk = ([string]$info.region).Trim().Equals($wantRegion, [StringComparison]::OrdinalIgnoreCase)
-        $zipOk = ([string]$info.postal).Trim().StartsWith($Zip)
-        if ($info.country -ne 'US' -or -not $cityOk -or -not $stateOk -or -not $zipOk) {
+        if ($info.country -ne 'US' -or $miles -gt $RadiusMiles) {
             continue
         }
 
@@ -154,7 +155,7 @@ if ($checked -eq 0) {
     Write-Warning "No usable ipinfo results after $Attempts attempts. Check the saved Legion login, then run test-one-line.ps1 if you get a 407."
 }
 else {
-    Write-Host "No $wantCity, $wantRegion $Zip exit in $Attempts attempts ($checked usable)."
+    Write-Host "No US exit within $RadiusMiles miles of $wantCity, $wantRegion $Zip in $Attempts attempts ($checked usable)."
     Write-Host "Closest: $closest"
 }
 exit 1
