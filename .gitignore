@@ -1,0 +1,3 @@
+# Legion credentials and hunt results. Never commit these.
+diago/scripts/legion/legion.env.ps1
+diago/scripts/legion/*.last.txt
