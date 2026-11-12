@@ -7,8 +7,8 @@
   Uses the saved login at %LOCALAPPDATA%\proxycheck-credential.xml.
   Username shape the gateway accepts:
     {account}_country-US_state-maryland_session-{id}_sesstime-1440
-  Stops at the first US exit ipinfo places within 20 miles of ZIP 21061.
-  Copies a Linken Sphere line: host:port:username:password
+  Keeps every US exit ipinfo places within 20 miles of ZIP 21061.
+  Copies one Linken Sphere line per hit: host:port:username:password
   That is budget.legionproxy.io:1337:USER:PASS
   It does not build host:port@user:pass.
 
@@ -72,10 +72,11 @@ $gateway = 'http://budget.legionproxy.io:1337'
 $checked = 0
 $closestMiles = [double]::PositiveInfinity
 $closest = $null
+$kept = New-Object System.Collections.Generic.List[object]
 
 Write-Host "Hunting within $RadiusMiles miles of $wantCity, $wantRegion $Zip"
 Write-Host "Username: ${account}_country-US_state-${stateSlug}_session-XXXXXXXXXX_sesstime-1440"
-Write-Host "Match rule: US exit within $RadiusMiles miles. Linken Sphere copy is host:port:user:pass."
+Write-Host "Match rule: keep every US exit within $RadiusMiles miles, then copy them all."
 
 try {
     for ($i = 1; $i -le $Attempts; $i++) {
@@ -132,16 +133,31 @@ noproxy = ""
             continue
         }
 
+        $kept.Add([pscustomobject]@{
+            IP            = [string]$info.ip
+            City          = [string]$info.city
+            State         = [string]$info.region
+            ZIP           = [string]$info.postal
+            Miles         = $milesRounded
+            Session       = $session
+            ProxyUsername = $username
+        })
+        Write-Host ("  kept {0}" -f $kept.Count)
+    }
+
+    if ($kept.Count -gt 0) {
         $endpoint = [uri]$gateway
-        # Linken Sphere: host:port:username:password
-        $proxyEntry = '{0}:{1}:{2}:{3}' -f $endpoint.Host, $endpoint.Port, $username, $password
-        Set-Clipboard -Value $proxyEntry -ErrorAction Stop
+        $proxyLines = foreach ($hit in $kept) {
+            '{0}:{1}:{2}:{3}' -f $endpoint.Host, $endpoint.Port, $hit.ProxyUsername, $password
+        }
+        Set-Clipboard -Value ($proxyLines -join "`r`n") -ErrorAction Stop
 
         Write-Host ''
-        Write-Host "MATCH $($info.ip)  $($info.city), $($info.region) $($info.postal)  $milesRounded mi"
-        Write-Host "session=$session"
-        Write-Host "Copied budget.legionproxy.io:1337:${username}:<password>"
-        Write-Host 'Paste into Linken Sphere.'
+        Write-Host "$($kept.Count) exits within $RadiusMiles miles. All Linken Sphere lines copied."
+        foreach ($hit in $kept) {
+            Write-Host ("{0}  {1}, {2} {3}  {4} mi  session={5}" -f $hit.IP, $hit.City, $hit.State, $hit.ZIP, $hit.Miles, $hit.Session)
+        }
+        Write-Host 'Paste into Linken Sphere. Passwords were copied, not printed.'
         return
     }
 }
