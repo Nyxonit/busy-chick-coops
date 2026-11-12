@@ -54,6 +54,10 @@ Services the contractor performs entirely in Brazil are generally foreign-source
 
 The contractor handles Brazilian taxes (IR, INSS, ISS, and a nota fiscal or RPA if their city requires one). Diago does not withhold Brazilian payroll taxes and does not provide CLT benefits.
 
+## What to email the contractor
+
+Email `diago/contractors/contractor-fill-in.md` first. That is the blank sheet this contractor, and the next one, fills in and sends back to hello@diagoai.com. Keep a copy of each returned sheet with that person’s signed agreement.
+
 ## How to send it
 
 1. Duplicate this folder.
