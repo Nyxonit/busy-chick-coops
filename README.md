@@ -61,6 +61,24 @@ use manufacturer photos for equipment once you're set up as a dealer.
 
 To update the site later, upload the folder again.
 
+## Deploying on a VPS
+
+Ubuntu, nginx, this folder checked out on the machine:
+
+```bash
+sudo bash deploy/vps-up.sh
+```
+
+That copies `index.html` and `photos/` to `/var/www/busy-chick-coops` and serves them on port 80 for `busychickcoops.com`, `www.busychickcoops.com`, `projectchick.com`, and `www.projectchick.com`. On a fresh Ubuntu image it also removes the packaged nginx welcome site, so a request to the VPS IP shows the store. Other vhosts already on the machine are left in place.
+
+Point DNS at the VPS (A record for each name, Cloudflare proxy off until the origin answers). Then:
+
+```bash
+sudo CERTBOT_EMAIL=you@example.com bash deploy/vps-up.sh --https
+```
+
+Re-run the same command after pulling updates. `projectchick.com` currently returns Cloudflare error 521, which means the origin in the Cloudflare DNS record is not accepting connections. Fix that record to this VPS before expecting the public hostname to load.
+
 ## Things still to decide / do (not code)
 - Real prices once materials and suppliers are costed
 - Delivery radius (currently says "within 60 miles")
